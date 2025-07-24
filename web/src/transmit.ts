@@ -4,6 +4,8 @@ import * as z from "zod/mini";
 import * as blueslip from "./blueslip.ts";
 import * as channel from "./channel.ts";
 import type {Message} from "./message_store.ts";
+import { show_user_group_mention_not_allowed_error } from "./compose_banner.ts";
+import * as compose_ui from "./compose_ui.ts";
 import * as people from "./people.ts";
 import * as reload from "./reload.ts";
 import * as reload_state from "./reload_state.ts";
@@ -89,6 +91,18 @@ export function send_message(
                     });
                     return;
                 }
+
+                // Check for group mention error
+                const response_data = xhr?.responseJSON;
+                if (response_data?.code === "USER_GROUP_MENTION_NOT_ALLOWED") {
+                    const group_name = response_data.user_group_name || "this group";
+                    
+                    show_user_group_mention_not_allowed_error(group_name);
+                    compose_ui.hide_compose_spinner();
+
+                    return;
+                }
+
 
                 const response = channel.xhr_error_message("Error sending message", xhr);
                 const parsed = z.object({code: z.string()}).safeParse(xhr.responseJSON);
